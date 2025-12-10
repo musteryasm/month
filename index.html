@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sticky Note Flipper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        .container {
+            perspective: 1000px;
+            position: relative;
+        }
+
+        .sticky-note {
+            width: 320px;
+            height: 320px;
+            background: #ffd700;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border-radius: 3px;
+            padding: 30px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .sticky-note::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 3px 3px 0 0;
+        }
+
+        .sticky-note.flip-out {
+            animation: flipOut 0.6s forwards;
+        }
+
+        .sticky-note.flip-in {
+            animation: flipIn 0.6s forwards;
+        }
+
+        .sticky-note.flip-back-out {
+            animation: flipBackOut 0.6s forwards;
+        }
+
+        .sticky-note.flip-back-in {
+            animation: flipBackIn 0.6s forwards;
+        }
+
+        @keyframes flipOut {
+            0% { transform: rotateY(0deg) scale(1); opacity: 1; }
+            100% { transform: rotateY(-180deg) scale(0.8); opacity: 0; }
+        }
+
+        @keyframes flipIn {
+            0% { transform: rotateY(180deg) scale(0.8); opacity: 0; }
+            100% { transform: rotateY(0deg) scale(1); opacity: 1; }
+        }
+
+        @keyframes flipBackOut {
+            0% { transform: rotateY(0deg) scale(1); opacity: 1; }
+            100% { transform: rotateY(180deg) scale(0.8); opacity: 0; }
+        }
+
+        @keyframes flipBackIn {
+            0% { transform: rotateY(-180deg) scale(0.8); opacity: 0; }
+            100% { transform: rotateY(0deg) scale(1); opacity: 1; }
+        }
+
+        .note-content {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #333;
+            margin-top: 20px;
+        }
+
+        .note-number {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            font-size: 14px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: -80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        #prevBtn {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        #prevBtn:hover {
+            background: #ee5a52;
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(0,0,0,0.3);
+        }
+
+        #nextBtn {
+            background: #51cf66;
+            color: white;
+        }
+
+        #nextBtn:hover {
+            background: #40c057;
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(0,0,0,0.3);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button:disabled:hover {
+            transform: none;
+        }
+
+        /* Fireworks */
+        .firework {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        @keyframes explode {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--x), var(--y));
+                opacity: 0;
+            }
+        }
+
+        .celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* Note colors */
+        .note-yellow { background: #ffd700; }
+        .note-pink { background: #ff69b4; }
+        .note-blue { background: #87ceeb; }
+        .note-green { background: #90ee90; }
+        .note-orange { background: #ffa500; }
+        .note-purple { background: #dda0dd; }
+    </style>
+</head>
+<body>
+    <div class="celebration" id="celebration"></div>
+    
+    <div class="container">
+        <div class="sticky-note note-yellow" id="stickyNote">
+            <div class="note-number"><span id="currentNote">1</span> / <span id="totalNotes">6</span></div>
+            <div class="note-content" id="noteContent">
+                <!-- Add your sticky note content here -->
+                <p>Welcome to the Sticky Note Flipper! 📝</p>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="prevBtn" disabled>← Previous</button>
+            <button id="nextBtn">Next →</button>
+        </div>
+    </div>
+
+    <script>
+        const notes = [
+            { content: "<p>hiiii qt! 📝</p>", color: "note-yellow" },
+            { content: "<p> cant believe its been a month already</p>", color: "note-pink" },
+            { content: "<p>anyway im really happy and i hope you are too</p>", color: "note-blue" },
+            { content: "<p>things are going pretty well</p>", color: "note-green" },
+            { content: "<p>well credits to me for that hehe🌟</p>", color: "note-orange" },
+            { content: "<p>but hey thankyou for this wonderful month 📝</p>", color: "note-yellow" },
+            { content: "<p> youre really adorable</p>", color: "note-pink" },
+            { content: "<p>pappi dedu pakadke roz mai toh</p>", color: "note-blue" },
+            { content: "<p>but anywayy, congratulations to us ig? we made it??!!</p>", color: "note-purple" }
+        ];
+
+        let currentIndex = 0;
+        const stickyNote = document.getElementById('stickyNote');
+        const noteContent = document.getElementById('noteContent');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const currentNoteSpan = document.getElementById('currentNote');
+        const totalNotesSpan = document.getElementById('totalNotes');
+        const celebration = document.getElementById('celebration');
+
+        totalNotesSpan.textContent = notes.length;
+
+        function updateNote() {
+            noteContent.innerHTML = notes[currentIndex].content;
+            stickyNote.className = `sticky-note ${notes[currentIndex].color}`;
+            currentNoteSpan.textContent = currentIndex + 1;
+            
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex === notes.length - 1;
+            
+            if (currentIndex === notes.length - 1) {
+                setTimeout(createFireworks, 300);
+            }
+        }
+
+        function flipNext() {
+            if (currentIndex < notes.length - 1) {
+                stickyNote.classList.add('flip-out');
+                
+                setTimeout(() => {
+                    currentIndex++;
+                    updateNote();
+                    stickyNote.classList.remove('flip-out');
+                    stickyNote.classList.add('flip-in');
+                    
+                    setTimeout(() => {
+                        stickyNote.classList.remove('flip-in');
+                    }, 600);
+                }, 600);
+            }
+        }
+
+        function flipPrev() {
+            if (currentIndex > 0) {
+                stickyNote.classList.add('flip-back-out');
+                
+                setTimeout(() => {
+                    currentIndex--;
+                    updateNote();
+                    stickyNote.classList.remove('flip-back-out');
+                    stickyNote.classList.add('flip-back-in');
+                    
+                    setTimeout(() => {
+                        stickyNote.classList.remove('flip-back-in');
+                    }, 600);
+                }, 600);
+            }
+        }
+
+        function createFireworks() {
+            celebration.innerHTML = '';
+            
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    const x = Math.random() * window.innerWidth;
+                    const y = Math.random() * window.innerHeight * 0.5;
+                    launchFirework(x, y);
+                }, i * 200);
+            }
+        }
+
+        function launchFirework(x, y) {
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffa500'];
+            const particleCount = 30;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'firework';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                
+                const angle = (Math.PI * 2 * i) / particleCount;
+                const velocity = 100 + Math.random() * 100;
+                const tx = Math.cos(angle) * velocity;
+                const ty = Math.sin(angle) * velocity;
+                
+                particle.style.setProperty('--x', tx + 'px');
+                particle.style.setProperty('--y', ty + 'px');
+                particle.style.animation = 'explode 1s ease-out forwards';
+                
+                celebration.appendChild(particle);
+                
+                setTimeout(() => particle.remove(), 1000);
+            }
+        }
+
+        nextBtn.addEventListener('click', flipNext);
+        prevBtn.addEventListener('click', flipPrev);
+        
+        updateNote();
+    </script>
+</body>
+</html>
